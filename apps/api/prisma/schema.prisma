@@ -1,0 +1,92 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  FAILED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  bookings Booking[]
+}
+
+model Stay {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  city          String
+  state         String
+  latitude      Decimal  @db.Decimal(10, 7)
+  longitude     Decimal  @db.Decimal(10, 7)
+  pricePerNight Int
+  maxGuests     Int
+  rating        Decimal? @db.Decimal(3, 2)
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@index([city])
+  @@index([state])
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  userId      String
+  stayId      String
+  checkIn     DateTime
+  checkOut    DateTime
+  guests      Int
+  totalAmount Int
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  stay     Stay      @relation(fields: [stayId], references: [id])
+  payments Payment[]
+
+  @@index([userId])
+  @@index([stayId])
+  @@index([stayId, checkIn, checkOut])
+  @@index([status])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  bookingId         String
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?       @unique
+  amount            Int
+  status            PaymentStatus @default(CREATED)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@index([status])
+}
