@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: stays-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stays
+      POSTGRES_PASSWORD: stays_dev_password
+      POSTGRES_DB: stays
+    ports:
+      - "5433:5432"
+    volumes:
+      - stays_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  stays_postgres_data:

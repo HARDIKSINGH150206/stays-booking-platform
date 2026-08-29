@@ -29,3 +29,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.swp
+# Tooling / generated metadata
+*.tsbuildinfo
+.agents/
+.claude/
+.windsurf/
