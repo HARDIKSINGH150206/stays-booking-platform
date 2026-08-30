@@ -27,6 +27,12 @@ export class BookingsController {
     return this.bookingsService.checkAvailability(stayId, query);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getMyBookings(@CurrentUser() user: AuthenticatedUser) {
+    return this.bookingsService.getMyBookings(user.sub);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   create(

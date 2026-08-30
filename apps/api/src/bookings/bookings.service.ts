@@ -122,6 +122,26 @@ export class BookingsService {
     };
   }
 
+  async getMyBookings(userId: string) {
+    return this.prisma.booking.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        stay: true,
+        payments: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async create(userId: string, dto: CreateBookingDto) {
     const checkIn = new Date(dto.checkIn);
     const checkOut = new Date(dto.checkOut);
