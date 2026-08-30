@@ -1,69 +1,90 @@
-import Image from "next/image";
+import { Badge } from "@/components/common/badge";
+import { Card, StrongCard } from "@/components/common/card";
+import { LinkButton } from "@/components/common/button";
+import { routes } from "@/lib/routes";
 
-export default function Home() {
+const steps = [
+  "Discover a stay from the seeded catalogue.",
+  "Review location, details, and availability.",
+  "Book securely, pay with Razorpay, and track the result.",
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="stays-container">
+      <section className="stays-section py-12 sm:py-16">
+        <StrongCard className="overflow-hidden">
+          <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="p-7 sm:p-10 lg:p-12">
+              <Badge tone="accent">Focused hospitality booking</Badge>
+              <h1 className="stays-heading mt-5 max-w-xl text-4xl leading-tight sm:text-5xl">
+                Find a stay, view the details, and book securely.
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--text-muted)] sm:text-lg">
+                STAYS is a compact booking platform built to demonstrate a clean
+                travel journey: discovery, map context, server-authored pricing, and
+                verified payment.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <LinkButton href={routes.stays}>Explore stays</LinkButton>
+                <LinkButton href={routes.login} variant="secondary">
+                  Login
+                </LinkButton>
+                <LinkButton href={routes.register} variant="ghost">
+                  Register
+                </LinkButton>
+              </div>
+            </div>
+            <div className="border-t border-[var(--line)] bg-[var(--surface-soft)] p-7 sm:p-10 lg:border-l lg:border-t-0 lg:p-12">
+              <div className="grid h-full gap-4">
+                <Card className="p-5">
+                  <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                    Product journey
+                  </p>
+                  <h2 className="stays-heading mt-2 text-3xl">Built for a simple demo flow</h2>
+                  <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+                    This version stays intentionally small, with real pages for
+                    authentication, discovery, booking, payment, and booking history.
+                  </p>
+                </Card>
+                <div className="grid gap-3">
+                  {steps.map((step, index) => (
+                    <Card key={step} className="flex items-start gap-4 p-4">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-white text-sm font-semibold text-[var(--accent-strong)]">
+                        {index + 1}
+                      </span>
+                      <p className="text-sm leading-6 text-[var(--text-muted)]">{step}</p>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </StrongCard>
+      </section>
+
+      <section className="stays-section">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="p-5">
+            <p className="text-sm font-semibold text-[var(--accent-strong)]">Discover</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              Browse the stay catalogue and open any stay detail page.
+            </p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm font-semibold text-[var(--accent-strong)]">Plan</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              Select dates and guest count, then request a server quote.
+            </p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-sm font-semibold text-[var(--accent-strong)]">Confirm</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              Continue through payment verification and review your bookings later.
+            </p>
+          </Card>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </section>
     </div>
   );
 }
