@@ -1,31 +1,24 @@
-export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CANCELLED'
+  | 'FAILED';
 
-export interface ApiErrorPayload {
-  message?: string;
-  error?: string;
-  code?: string;
-  details?: JsonValue;
-}
+export type PaymentStatus =
+  | 'CREATED'
+  | 'PENDING'
+  | 'SUCCESS'
+  | 'FAILED';
 
-export interface ApiFailure {
-  message: string;
-  status?: number;
-  code: string;
-  details?: JsonValue;
-  raw?: unknown;
-}
-
-export interface AuthUser {
+export interface User {
   id: string;
   name: string;
   email: string;
-  createdAt?: string;
 }
 
-export interface AuthSession {
-  user: AuthUser;
-  token?: string | null;
+export interface AuthResponse {
+  accessToken: string;
+  user: User;
 }
 
 export interface Stay {
@@ -34,18 +27,36 @@ export interface Stay {
   description: string;
   city: string;
   state: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | string;
+  longitude: number | string;
   pricePerNight: number;
   maxGuests: number;
-  rating?: number | null;
-  metadata?: Record<string, JsonValue> | null;
+  rating?: number | string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "FAILED";
-export type PaymentStatus = "CREATED" | "PENDING" | "SUCCESS" | "FAILED";
+export interface StayListResponse {
+  data: Stay[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface BookingPayment {
+  id: string;
+  bookingId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId?: string | null;
+  amount: number;
+  status: PaymentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Booking {
   id: string;
@@ -56,21 +67,10 @@ export interface Booking {
   guests: number;
   totalAmount: number;
   status: BookingStatus;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
   stay?: Stay;
-  payments?: Payment[];
-}
-
-export interface Payment {
-  id: string;
-  bookingId: string;
-  razorpayOrderId: string;
-  razorpayPaymentId?: string | null;
-  amount: number;
-  status: PaymentStatus;
-  createdAt?: string;
-  updatedAt?: string;
+  payments?: BookingPayment[];
 }
 
 export interface BookingQuote {
@@ -78,29 +78,27 @@ export interface BookingQuote {
   checkIn: string;
   checkOut: string;
   guests: number;
-  nights?: number;
+  nights: number;
+  pricePerNight: number;
   totalAmount: number;
 }
 
-export interface BookingInput {
-  stayId: string;
-  checkIn: string;
-  checkOut: string;
-  guests: number;
+export interface AvailabilityResponse {
+  available: boolean;
 }
 
-export interface RazorpayOrder {
-  orderId: string;
+export interface PaymentOrder {
+  paymentId: string;
+  razorpayOrderId: string;
   amount: number;
   currency?: string;
-  bookingId?: string;
-  keyId?: string;
-  notes?: Record<string, string>;
+  status: PaymentStatus;
 }
 
-export interface RazorpayVerificationInput {
+export interface PaymentVerificationResponse {
+  paymentId: string;
   bookingId: string;
-  razorpayOrderId: string;
-  razorpayPaymentId: string;
-  razorpaySignature: string;
+  razorpayPaymentId?: string | null;
+  status: PaymentStatus;
+  bookingStatus: BookingStatus;
 }

@@ -1,175 +1,243 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { LinkButton } from "@/components/common/button";
-import { Card, StrongCard } from "@/components/common/card";
-import { EmptyState, ErrorState, LoadingState, SectionHeading } from "@/components/common/feedback";
-import { BookingList } from "@/components/dashboard/booking-list";
-import { useSession } from "@/components/providers/session-provider";
-import { listBookings } from "@/lib/api/bookings";
-import { isApiUnavailableError, toErrorMessage } from "@/lib/api/client";
-import { routes } from "@/lib/routes";
-import type { Booking } from "@/lib/types";
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { getCurrentUser, getMyBookings } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
+import type { Booking, User } from '@/lib/types';
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function statusClass(status: Booking['status']) {
+  switch (status) {
+    case 'CONFIRMED':
+      return 'bg-emerald-50 text-emerald-700';
+    case 'PENDING':
+      return 'bg-amber-50 text-amber-700';
+    case 'CANCELLED':
+      return 'bg-red-50 text-red-700';
+    case 'FAILED':
+      return 'bg-red-50 text-red-700';
+    default:
+      return 'bg-zinc-100 text-zinc-700';
+  }
+}
 
 export default function DashboardPage() {
-  const { session, isAuthenticated, isReady } = useSession();
+  const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    let active = true;
+    async function loadDashboard() {
+      const token = getAccessToken();
 
-    async function load() {
-      if (!isAuthenticated) {
-        if (active) {
-          setLoading(false);
-        }
+      if (!token) {
+        window.location.href = '/login?redirect=%2Fdashboard';
         return;
       }
 
-      setLoading(true);
-      setError(null);
       try {
-        const nextBookings = await listBookings();
-        if (active) {
-          setBookings(nextBookings);
+        const [currentUser, myBookings] = await Promise.all([
+          getCurrentUser(token),
+          getMyBookings(token),
+        ]);
+
+        setUser(currentUser);
+        setBookings(myBookings);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Unable to load dashboard.';
+
+        if (
+          message.toLowerCase().includes('token') ||
+          message.toLowerCase().includes('unauthorized')
+        ) {
+          window.location.href = '/login?redirect=%2Fdashboard';
+          return;
         }
-      } catch (error) {
-        if (active) {
-          setError(
-            isApiUnavailableError(error)
-              ? "Booking history backend is not connected yet."
-              : toErrorMessage(error),
-          );
-        }
+
+        setError(message);
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     }
 
-    void load();
+    loadDashboard();
+  }, []);
 
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated]);
-
-  if (!isReady) {
+  if (loading) {
     return (
-      <div className="stays-container py-10 sm:py-16">
-        <LoadingState title="Loading session" description="Checking your signed-in state." />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !session) {
-    return (
-      <div className="stays-container py-10 sm:py-16">
-        <StrongCard className="p-6 sm:p-8 lg:p-10">
-          <div className="grid gap-5">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                Protected area
-              </p>
-              <h1 className="stays-heading mt-2 text-4xl">Sign in to open the dashboard</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-muted)] sm:text-base">
-                The dashboard stays behind authentication. Once backend sign-in is
-                available, this page will show your profile summary and bookings.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <LinkButton href={routes.login}>Login</LinkButton>
-              <LinkButton href={routes.register} variant="secondary">
-                Register
-              </LinkButton>
-              <LinkButton href={routes.stays} variant="ghost">
-                Explore stays
-              </LinkButton>
-            </div>
-          </div>
-        </StrongCard>
-      </div>
+      <main className="min-h-screen bg-zinc-50 px-6 py-12">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-sm text-zinc-500">Loading your dashboard...</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="stays-container py-10 sm:py-16">
-      <div className="grid gap-8">
-        <SectionHeading
-          eyebrow="Dashboard"
-          title={`Welcome, ${session.user.name}`}
-          description="Your dashboard keeps the flow small: discover a stay, complete a booking, and review the result."
-          actions={
-            <div className="flex flex-wrap gap-3">
-              <LinkButton href={routes.stays}>Explore stays</LinkButton>
-              <LinkButton href={routes.bookings} variant="secondary">
-                My bookings
-              </LinkButton>
-            </div>
-          }
-        />
+    <main className="min-h-screen bg-zinc-50 px-6 py-12">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-10">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-emerald-700">
+            Dashboard
+          </p>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="p-5 sm:col-span-2">
-            <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">
-              Account
-            </p>
-            <h2 className="stays-heading mt-2 text-3xl">Profile summary</h2>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-[var(--line)] bg-[var(--surface-soft)] p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                  Name
-                </p>
-                <p className="mt-1 font-medium">{session.user.name}</p>
-              </div>
-              <div className="rounded-3xl border border-[var(--line)] bg-[var(--surface-soft)] p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                  Email
-                </p>
-                <p className="mt-1 font-medium">{session.user.email}</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">
-              Next step
-            </p>
-            <h2 className="stays-heading mt-2 text-2xl">Go browse stays</h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-              Discover the seeded stays, open a detail page, and continue into the
-              booking flow.
-            </p>
-            <div className="mt-5">
-              <LinkButton href={routes.stays}>Explore stays</LinkButton>
-            </div>
-          </Card>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-950">
+            Welcome{user?.name ? `, ${user.name}` : ''}
+          </h1>
+
+          <p className="mt-2 text-zinc-600">
+            Manage your stays and reservations.
+          </p>
         </div>
 
-        {loading ? (
-          <LoadingState
-            title="Loading bookings"
-            description="Fetching your recent booking records from the backend."
-          />
-        ) : error ? (
-          <ErrorState
-            description={error}
-            actionLabel="Explore stays"
-            actionHref={routes.stays}
-          />
-        ) : bookings.length ? (
-          <BookingList bookings={bookings.slice(0, 3)} />
-        ) : (
-          <EmptyState
-            title="No bookings yet"
-            description="Once bookings exist, they will appear here with payment and status details."
-            actionLabel="Explore stays"
-            actionHref={routes.stays}
-          />
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            {error}
+          </div>
         )}
+
+        <section>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-950">
+                My bookings
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                {bookings.length === 0
+                  ? 'You have no bookings yet.'
+                  : `${bookings.length} booking${bookings.length === 1 ? '' : 's'}`}
+              </p>
+            </div>
+
+            <Link
+              href="/stays"
+              className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              Explore stays
+            </Link>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-10 text-center">
+              <h3 className="text-lg font-semibold text-zinc-950">
+                No bookings yet
+              </h3>
+
+              <p className="mt-2 text-sm text-zinc-500">
+                Find a stay and make your first reservation.
+              </p>
+
+              <Link
+                href="/stays"
+                className="mt-6 inline-flex rounded-xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white hover:bg-zinc-800"
+              >
+                Browse stays
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {bookings.map((booking) => {
+                const payment = booking.payments?.[0];
+
+                return (
+                  <article
+                    key={booking.id}
+                    className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-lg font-semibold text-zinc-950">
+                            {booking.stay?.name ?? 'Stay'}
+                          </h3>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass(
+                              booking.status,
+                            )}`}
+                          >
+                            {booking.status}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-sm text-zinc-500">
+                          {booking.stay
+                            ? `${booking.stay.city}, ${booking.stay.state}`
+                            : 'Location unavailable'}
+                        </p>
+                      </div>
+
+                      <div className="md:text-right">
+                        <p className="text-xl font-bold text-zinc-950">
+                          ₹{booking.totalAmount.toLocaleString('en-IN')}
+                        </p>
+
+                        <p className="text-sm text-zinc-500">total</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 border-t border-zinc-100 pt-6 sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-zinc-400">
+                          Check-in
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-zinc-800">
+                          {formatDate(booking.checkIn)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-zinc-400">
+                          Check-out
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-zinc-800">
+                          {formatDate(booking.checkOut)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-zinc-400">
+                          Guests
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-zinc-800">
+                          {booking.guests}
+                        </p>
+                      </div>
+                    </div>
+
+                    {payment && (
+                      <div className="mt-5 text-xs text-zinc-500">
+                        Payment: {payment.status}
+                      </div>
+                    )}
+
+                    {booking.stay && (
+                      <div className="mt-5">
+                        <Link
+                          href={`/stays/${booking.stay.id}`}
+                          className="text-sm font-medium text-zinc-700 hover:text-zinc-950"
+                        >
+                          View stay →
+                        </Link>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
