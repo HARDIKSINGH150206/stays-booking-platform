@@ -12,17 +12,12 @@ import { QuoteBookingDto } from './dto/quote-booking.dto';
 export class BookingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checkAvailability(
-    stayId: string,
-    query: CheckAvailabilityDto,
-  ) {
+  async checkAvailability(stayId: string, query: CheckAvailabilityDto) {
     const checkIn = new Date(query.checkIn);
     const checkOut = new Date(query.checkOut);
 
     if (checkOut <= checkIn) {
-      throw new BadRequestException(
-        'checkOut must be after checkIn',
-      );
+      throw new BadRequestException('checkOut must be after checkIn');
     }
 
     const stay = await this.prisma.stay.findUnique({
@@ -62,9 +57,7 @@ export class BookingsService {
     const checkOut = new Date(dto.checkOut);
 
     if (checkOut <= checkIn) {
-      throw new BadRequestException(
-        'checkOut must be after checkIn',
-      );
+      throw new BadRequestException('checkOut must be after checkIn');
     }
 
     const stay = await this.prisma.stay.findUnique({
@@ -113,8 +106,7 @@ export class BookingsService {
     const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
     const nights = Math.ceil(
-      (checkOut.getTime() - checkIn.getTime()) /
-        millisecondsPerDay,
+      (checkOut.getTime() - checkIn.getTime()) / millisecondsPerDay,
     );
 
     const totalAmount = nights * stay.pricePerNight;
@@ -130,22 +122,21 @@ export class BookingsService {
     };
   }
 
-  async create(dto: CreateBookingDto) {
+  async create(userId: string, dto: CreateBookingDto) {
     const checkIn = new Date(dto.checkIn);
     const checkOut = new Date(dto.checkOut);
 
     if (checkOut <= checkIn) {
-      throw new BadRequestException(
-        'checkOut must be after checkIn',
-      );
+      throw new BadRequestException('checkOut must be after checkIn');
     }
 
     return this.prisma.$transaction(async (tx) => {
       const [user, stay] = await Promise.all([
         tx.user.findUnique({
-          where: { id: dto.userId },
+          where: { id: userId },
           select: { id: true },
         }),
+
         tx.stay.findUnique({
           where: { id: dto.stayId },
           select: {
@@ -211,15 +202,14 @@ export class BookingsService {
       const millisecondsPerDay = 1000 * 60 * 60 * 24;
 
       const nights = Math.ceil(
-        (checkOut.getTime() - checkIn.getTime()) /
-          millisecondsPerDay,
+        (checkOut.getTime() - checkIn.getTime()) / millisecondsPerDay,
       );
 
       const totalAmount = nights * stay.pricePerNight;
 
       return tx.booking.create({
         data: {
-          userId: dto.userId,
+          userId,
           stayId: dto.stayId,
           checkIn,
           checkOut,

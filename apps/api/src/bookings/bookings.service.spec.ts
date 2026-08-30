@@ -1,8 +1,5 @@
 import { jest } from '@jest/globals';
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -35,9 +32,8 @@ describe('BookingsService', () => {
       findUnique: jest.fn<() => Promise<unknown>>(),
     },
     $transaction: jest.fn(
-      async (
-        callback: (tx: typeof txMock) => Promise<unknown>,
-      ) => callback(txMock),
+      async (callback: (tx: typeof txMock) => Promise<unknown>) =>
+        callback(txMock),
     ),
   };
 
@@ -58,7 +54,6 @@ describe('BookingsService', () => {
 
     txMock.booking.create.mockResolvedValue({
       id: 'booking-1',
-      userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       stayId: '11111111-1111-4111-8111-111111111111',
       checkIn: new Date('2026-09-10T00:00:00.000Z'),
       checkOut: new Date('2026-09-13T00:00:00.000Z'),
@@ -69,9 +64,7 @@ describe('BookingsService', () => {
 
     txMock.$queryRaw.mockResolvedValue([]);
 
-    service = new BookingsService(
-      prismaMock as unknown as PrismaService,
-    );
+    service = new BookingsService(prismaMock as unknown as PrismaService);
   });
 
   describe('checkAvailability', () => {
@@ -224,16 +217,17 @@ describe('BookingsService', () => {
 
   describe('create', () => {
     const dto = {
-      userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       stayId: '11111111-1111-4111-8111-111111111111',
       checkIn: '2026-09-10T00:00:00.000Z',
       checkOut: '2026-09-13T00:00:00.000Z',
       guests: 2,
     };
 
+    const userId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
     beforeEach(() => {
       txMock.user.findUnique.mockResolvedValue({
-        id: dto.userId,
+        id: userId,
       });
 
       txMock.stay.findUnique.mockResolvedValue({
@@ -246,7 +240,7 @@ describe('BookingsService', () => {
 
       txMock.booking.create.mockResolvedValue({
         id: 'booking-1',
-        userId: dto.userId,
+        userId: userId,
         stayId: dto.stayId,
         checkIn: new Date(dto.checkIn),
         checkOut: new Date(dto.checkOut),
@@ -257,11 +251,14 @@ describe('BookingsService', () => {
     });
 
     it('should create a pending booking with the correct total', async () => {
-      const result = await service.create(dto);
+      const result = await service.create(
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        dto,
+      );
 
       expect(result).toEqual({
         id: 'booking-1',
-        userId: dto.userId,
+        userId: userId,
         stayId: dto.stayId,
         checkIn: new Date(dto.checkIn),
         checkOut: new Date(dto.checkOut),
@@ -272,7 +269,7 @@ describe('BookingsService', () => {
 
       expect(txMock.booking.create).toHaveBeenCalledWith({
         data: {
-          userId: dto.userId,
+          userId: userId,
           stayId: dto.stayId,
           checkIn: new Date(dto.checkIn),
           checkOut: new Date(dto.checkOut),
@@ -290,7 +287,7 @@ describe('BookingsService', () => {
         checkOut: '2026-09-11T00:00:00.000Z',
       };
 
-      await service.create(oneNightDto);
+      await service.create('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', oneNightDto);
 
       expect(txMock.booking.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -303,7 +300,7 @@ describe('BookingsService', () => {
 
     it('should reject an invalid date range', async () => {
       await expect(
-        service.create({
+        service.create(userId, {
           ...dto,
           checkIn: '2026-09-15T00:00:00.000Z',
           checkOut: '2026-09-10T00:00:00.000Z',
@@ -319,9 +316,9 @@ describe('BookingsService', () => {
     it('should reject when the user does not exist', async () => {
       txMock.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.create('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dto),
+      ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(txMock.booking.create).not.toHaveBeenCalled();
     });
@@ -329,9 +326,9 @@ describe('BookingsService', () => {
     it('should reject when the stay does not exist', async () => {
       txMock.stay.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(dto)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.create('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dto),
+      ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(txMock.booking.create).not.toHaveBeenCalled();
     });
@@ -344,7 +341,7 @@ describe('BookingsService', () => {
       });
 
       await expect(
-        service.create({
+        service.create(userId, {
           ...dto,
           guests: 3,
         }),
@@ -359,9 +356,9 @@ describe('BookingsService', () => {
         id: 'existing-booking',
       });
 
-      await expect(service.create(dto)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.create('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dto),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(txMock.booking.create).not.toHaveBeenCalled();
     });
