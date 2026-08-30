@@ -1,6 +1,9 @@
 import { jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { StaysService } from './stays.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -161,6 +164,118 @@ describe('StaysService', () => {
         },
       }),
     );
+  });
+
+  it('should filter out stays with overlapping pending or confirmed bookings', async () => {
+    prismaMock.stay.findMany.mockResolvedValue([]);
+    prismaMock.stay.count.mockResolvedValue(0);
+
+    await service.findAll({
+      checkIn: '2026-09-12T00:00:00.000Z',
+      checkOut: '2026-09-14T00:00:00.000Z',
+      page: 1,
+      limit: 20,
+    });
+
+    expect(prismaMock.stay.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          bookings: {
+            none: {
+              status: {
+                in: ['PENDING', 'CONFIRMED'],
+              },
+              checkIn: {
+                lt: new Date('2026-09-14T00:00:00.000Z'),
+              },
+              checkOut: {
+                gt: new Date('2026-09-12T00:00:00.000Z'),
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(prismaMock.stay.count).toHaveBeenCalledWith({
+      where: {
+        bookings: {
+          none: {
+            status: {
+              in: ['PENDING', 'CONFIRMED'],
+            },
+            checkIn: {
+              lt: new Date('2026-09-14T00:00:00.000Z'),
+            },
+            checkOut: {
+              gt: new Date('2026-09-12T00:00:00.000Z'),
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('should allow adjacent bookings where checkout equals requested checkin', async () => {
+    prismaMock.stay.findMany.mockResolvedValue([]);
+    prismaMock.stay.count.mockResolvedValue(0);
+
+    await service.findAll({
+      checkIn: '2026-09-15T00:00:00.000Z',
+      checkOut: '2026-09-18T00:00:00.000Z',
+      page: 1,
+      limit: 20,
+    });
+
+    const call = (prismaMock.stay.findMany.mock.calls as any[])[0][0] as any;
+
+    expect(call.where.bookings.none.checkIn).toEqual({
+      lt: new Date('2026-09-18T00:00:00.000Z'),
+    });
+
+    expect(call.where.bookings.none.checkOut).toEqual({
+      gt: new Date('2026-09-15T00:00:00.000Z'),
+    });
+  });
+
+  it('should reject a checkIn without checkOut', async () => {
+    await expect(
+      service.findAll({
+        checkIn: '2026-09-12T00:00:00.000Z',
+        page: 1,
+        limit: 20,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.stay.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.stay.count).not.toHaveBeenCalled();
+  });
+
+  it('should reject a checkOut without checkIn', async () => {
+    await expect(
+      service.findAll({
+        checkOut: '2026-09-14T00:00:00.000Z',
+        page: 1,
+        limit: 20,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.stay.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.stay.count).not.toHaveBeenCalled();
+  });
+
+  it('should reject when checkOut is not after checkIn', async () => {
+    await expect(
+      service.findAll({
+        checkIn: '2026-09-15T00:00:00.000Z',
+        checkOut: '2026-09-10T00:00:00.000Z',
+        page: 1,
+        limit: 20,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prismaMock.stay.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.stay.count).not.toHaveBeenCalled();
   });
 
   it('should return a stay by id', async () => {

@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListStaysDto {
   @IsOptional()
@@ -15,6 +22,14 @@ export class ListStaysDto {
   @IsInt()
   @Min(1)
   guests?: number;
+
+  @IsOptional()
+  @IsDateString()
+  checkIn?: string;
+
+  @IsOptional()
+  @IsDateString()
+  checkOut?: string;
 
   @IsOptional()
   @Type(() => Number)
