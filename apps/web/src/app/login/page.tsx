@@ -1,75 +1,125 @@
-"use client";
+'use client';
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { LoginForm } from "@/components/auth/login-form";
-import { Card } from "@/components/common/card";
-import { LinkButton } from "@/components/common/button";
-import { LoadingState } from "@/components/common/feedback";
-import { routes } from "@/lib/routes";
-
-function LoginPageContent() {
-  const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") ?? undefined;
-
-  return (
-    <div className="stays-container py-10 sm:py-16">
-      <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <Card className="p-6 sm:p-8 lg:p-10">
-          <div className="grid gap-5">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                Welcome back
-              </p>
-              <h1 className="stays-heading mt-2 text-4xl">Login to continue</h1>
-              <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--text-muted)] sm:text-base">
-                Sign in to access the dashboard, booking flow, and your reservation
-                history.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="rounded-3xl border border-[var(--line)] bg-[var(--surface-soft)] p-4">
-                <p className="text-sm font-semibold text-[var(--accent-strong)]">
-                  Demo account
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  demo@stays.local
-                </p>
-              </div>
-              <p className="text-sm text-[var(--text-muted)]">
-                If the backend is not connected yet, the form will explain the current
-                integration boundary rather than faking a login.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <LinkButton href={routes.stays} variant="secondary">
-                Explore stays
-              </LinkButton>
-              <LinkButton href={routes.register} variant="ghost">
-                Register instead
-              </LinkButton>
-            </div>
-          </div>
-        </Card>
-
-        <LoginForm returnTo={returnTo} />
-      </div>
-    </div>
-  );
-}
+import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { login } from '@/lib/api';
+import { setAccessToken } from '@/lib/auth';
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await login(email, password);
+
+      setAccessToken(response.accessToken);
+      router.push('/stays');
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to sign in.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <Suspense
-      fallback={
-        <div className="stays-container py-10 sm:py-16">
-          <LoadingState title="Loading login" description="Preparing the sign-in form." />
+    <main className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-6 py-16">
+      <div className="mx-auto max-w-md">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <div className="mb-8">
+            <h1 className="text-2xl font-semibold text-zinc-950">
+              Welcome back
+            </h1>
+
+            <p className="mt-2 text-sm text-zinc-600">
+              Sign in to manage your stays and bookings.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-sm font-medium text-zinc-900"
+              >
+                Email
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-medium text-zinc-900"
+              >
+                Password
+              </label>
+
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
+                className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-zinc-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-zinc-600">
+            Don&apos;t have an account?{' '}
+            <Link
+              href="/register"
+              className="font-medium text-zinc-950 underline underline-offset-4"
+            >
+              Create one
+            </Link>
+          </p>
         </div>
-      }
-    >
-      <LoginPageContent />
-    </Suspense>
+      </div>
+    </main>
   );
 }
