@@ -1,87 +1,100 @@
-"use client";
+import { getStays } from '@/lib/api';
+import { StayCard } from '@/components/stay-card';
+import { StaySearch } from '@/components/stay-search';
 
-import { useEffect, useState } from "react";
-import { Card } from "@/components/common/card";
-import { EmptyState, ErrorState, LoadingState, SectionHeading } from "@/components/common/feedback";
-import { StayList } from "@/components/stays/stay-list";
-import { listStays } from "@/lib/api/stays";
-import { isApiUnavailableError, toErrorMessage } from "@/lib/api/client";
-import { routes } from "@/lib/routes";
-import type { Stay } from "@/lib/types";
+interface StaysPageProps {
+  searchParams: Promise<{
+    city?: string;
+    state?: string;
+    guests?: string;
+    checkIn?: string;
+    checkOut?: string;
+    page?: string;
+  }>;
+}
 
-export default function StaysPage() {
-  const [stays, setStays] = useState<Stay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default async function StaysPage({
+  searchParams,
+}: StaysPageProps) {
+  const params = await searchParams;
 
-  useEffect(() => {
-    let active = true;
+  const guests = params.guests
+    ? Number(params.guests)
+    : undefined;
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const nextStays = await listStays();
-        if (active) {
-          setStays(nextStays);
-        }
-      } catch (error) {
-        if (active) {
-          setError(
-            isApiUnavailableError(error)
-              ? "Stay catalogue backend is not connected yet."
-              : toErrorMessage(error),
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
+  let result;
 
-    void load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  try {
+    result = await getStays({
+      city: params.city,
+      state: params.state,
+      guests,
+      checkIn: params.checkIn,
+      checkOut: params.checkOut,
+      page: params.page ? Number(params.page) : 1,
+      limit: 20,
+    });
+  } catch {
+    result = null;
+  }
 
   return (
-    <div className="stays-container py-10 sm:py-16">
-      <div className="grid gap-8">
-        <SectionHeading
-          eyebrow="Stay discovery"
-          title="Browse the seeded stay catalogue"
-          description="Keep the catalogue focused: each stay card shows location, price, basic metadata, and a clear route to the detail page."
-        />
-
-        {loading ? (
-          <LoadingState title="Loading stays" description="Fetching the catalogue from the backend." />
-        ) : error ? (
-          <ErrorState
-            description={error}
-            actionLabel="Go home"
-            actionHref={routes.home}
-          />
-        ) : stays.length ? (
-          <StayList stays={stays} />
-        ) : (
-          <EmptyState
-            title="No stays available"
-            description="The catalogue is currently empty. When seeded stays are exposed through the API, they will appear here."
-            actionLabel="Return home"
-            actionHref={routes.home}
-          />
-        )}
-
-        <Card className="p-5">
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
-            This route intentionally keeps filters minimal. The first version focuses on
-            a clean discovery flow instead of a noisy marketplace interface.
+    <main className="min-h-screen bg-zinc-50">
+      <section className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mb-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">
+            Explore
           </p>
-        </Card>
-      </div>
-    </div>
+
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+            Find your next stay
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+            Search available stays by destination, dates, and
+            number of guests.
+          </p>
+        </div>
+
+        <StaySearch />
+
+        <div className="mt-10">
+          {!result ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+              We couldn&apos;t load the stays. Make sure the API
+              server is running and try again.
+            </div>
+          ) : result.data.length === 0 ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-10 text-center">
+              <h2 className="text-lg font-semibold text-zinc-950">
+                No stays found
+              </h2>
+
+              <p className="mt-2 text-sm text-zinc-600">
+                Try a different destination, date, or guest count.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-5 flex items-center justify-between">
+                <p className="text-sm text-zinc-600">
+                  {result.pagination.total}{' '}
+                  {result.pagination.total === 1
+                    ? 'stay'
+                    : 'stays'}{' '}
+                  found
+                </p>
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {result.data.map((stay) => (
+                  <StayCard key={stay.id} stay={stay} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }
