@@ -1,8 +1,19 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QuoteBookingDto } from './dto/quote-booking.dto';
 import { BookingsService } from './bookings.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('bookings')
 export class BookingsController {
@@ -17,12 +28,14 @@ export class BookingsController {
   }
 
   @Post()
-  create(@Body() dto: CreateBookingDto) {
-    return this.bookingsService.create(dto);
+  @UseGuards(JwtAuthGuard)
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateBookingDto,
+  ) {
+    return this.bookingsService.create(user.sub, dto);
   }
 
-  @HttpCode(200)
-  @HttpCode(200)
   @Post('quote')
   quote(@Body() dto: QuoteBookingDto) {
     return this.bookingsService.quote(dto);

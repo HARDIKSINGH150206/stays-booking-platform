@@ -13,9 +13,7 @@ describe('BookingsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    controller = new BookingsController(
-      bookingsServiceMock as any,
-    );
+    controller = new BookingsController(bookingsServiceMock as any);
   });
 
   it('should be defined', () => {
@@ -36,18 +34,23 @@ describe('BookingsController', () => {
 
     bookingsServiceMock.checkAvailability.mockResolvedValue(response);
 
-    await expect(
-      controller.checkAvailability(stayId, query),
-    ).resolves.toEqual(response);
+    await expect(controller.checkAvailability(stayId, query)).resolves.toEqual(
+      response,
+    );
 
-    expect(
-      bookingsServiceMock.checkAvailability,
-    ).toHaveBeenCalledWith(stayId, query);
+    expect(bookingsServiceMock.checkAvailability).toHaveBeenCalledWith(
+      stayId,
+      query,
+    );
   });
 
-  it('should delegate booking creation to the service', async () => {
+  it('should delegate booking creation to the service using the authenticated user', async () => {
+    const user = {
+      sub: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      email: 'hardik@example.com',
+    };
+
     const dto = {
-      userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       stayId: '11111111-1111-4111-8111-111111111111',
       checkIn: '2026-09-10T00:00:00.000Z',
       checkOut: '2026-09-12T00:00:00.000Z',
@@ -56,6 +59,7 @@ describe('BookingsController', () => {
 
     const response = {
       id: 'booking-1',
+      userId: user.sub,
       ...dto,
       totalAmount: 9000,
       status: 'PENDING',
@@ -63,11 +67,9 @@ describe('BookingsController', () => {
 
     bookingsServiceMock.create.mockResolvedValue(response);
 
-    await expect(
-      controller.create(dto),
-    ).resolves.toEqual(response);
+    await expect(controller.create(user, dto)).resolves.toEqual(response);
 
-    expect(bookingsServiceMock.create).toHaveBeenCalledWith(dto);
+    expect(bookingsServiceMock.create).toHaveBeenCalledWith(user.sub, dto);
   });
 
   it('should delegate booking quotes to the service', async () => {

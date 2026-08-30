@@ -1,16 +1,7 @@
 import { Type } from 'class-transformer';
-import {
-  IsDateString,
-  IsInt,
-  IsUUID,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsDateString, IsInt, IsUUID, Max, Min } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsUUID()
-  userId!: string;
-
   @IsUUID()
   stayId!: string;
 
